@@ -6,6 +6,13 @@
   <meta name="theme-color" content="#101226">
   <title>今天几点下班？</title>
   <style>
+    @property --bg-a { syntax: "<color>"; inherits: true; initial-value: #17142f; }
+    @property --bg-b { syntax: "<color>"; inherits: true; initial-value: #101226; }
+    @property --bg-c { syntax: "<color>"; inherits: true; initial-value: #171a3d; }
+    @property --glow-a { syntax: "<color>"; inherits: true; initial-value: rgba(255,111,174,.32); }
+    @property --glow-b { syntax: "<color>"; inherits: true; initial-value: rgba(95,201,255,.25); }
+    @property --glow-c { syntax: "<color>"; inherits: true; initial-value: rgba(143,124,255,.30); }
+
     :root {
       --ink: #f8f7ff;
       --muted: rgba(248, 247, 255, .64);
@@ -14,8 +21,14 @@
       --blue: #5fc9ff;
       --glass: rgba(255, 255, 255, .10);
       --line: rgba(255, 255, 255, .15);
+      --glow-a: rgba(255, 111, 174, .32);
+      --glow-b: rgba(95, 201, 255, .25);
+      --glow-c: rgba(143, 124, 255, .30);
+      --bg-a: #17142f;
+      --bg-b: #101226;
+      --bg-c: #171a3d;
     }
- 
+
     * { box-sizing: border-box; }
 
     html, body { margin: 0; min-height: 100%; }
@@ -26,11 +39,22 @@
       color: var(--ink);
       font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
       background:
-        radial-gradient(circle at 12% 18%, rgba(255, 111, 174, .32), transparent 28%),
-        radial-gradient(circle at 88% 12%, rgba(95, 201, 255, .25), transparent 26%),
-        radial-gradient(circle at 55% 90%, rgba(143, 124, 255, .30), transparent 34%),
-        linear-gradient(155deg, #17142f 0%, #101226 56%, #171a3d 100%);
+        radial-gradient(circle at 12% 18%, var(--glow-a), transparent 28%),
+        radial-gradient(circle at 88% 12%, var(--glow-b), transparent 26%),
+        radial-gradient(circle at 55% 90%, var(--glow-c), transparent 34%),
+        linear-gradient(155deg, var(--bg-a) 0%, var(--bg-b) 56%, var(--bg-c) 100%);
+      transition: --bg-a 1.8s ease, --bg-b 1.8s ease, --bg-c 1.8s ease,
+                  --glow-a 1.8s ease, --glow-b 1.8s ease, --glow-c 1.8s ease;
     }
+
+    body[data-theme="tired"] { --glow-a: rgba(89,103,154,.20); --glow-b: rgba(64,86,130,.22); --glow-c: rgba(82,65,126,.20); --bg-a: #20253a; --bg-b: #131827; --bg-c: #24233a; }
+    body[data-theme="steady"] { --glow-a: rgba(105,122,255,.25); --glow-b: rgba(63,186,255,.22); --glow-c: rgba(129,91,225,.28); --bg-a: #182044; --bg-b: #10162f; --bg-c: #242052; }
+    body[data-theme="hopeful"] { --glow-a: rgba(255,111,174,.34); --glow-b: rgba(95,201,255,.28); --glow-c: rgba(143,124,255,.34); --bg-a: #25163c; --bg-b: #141431; --bg-c: #29245c; }
+    body[data-theme="excited"] { --glow-a: rgba(255,92,135,.48); --glow-b: rgba(255,185,80,.34); --glow-c: rgba(172,91,255,.43); --bg-a: #451b43; --bg-b: #241538; --bg-c: #59335b; }
+    body[data-theme="party"] { --glow-a: rgba(255,103,125,.50); --glow-b: rgba(255,198,87,.42); --glow-c: rgba(165,92,255,.43); --bg-a: #51203f; --bg-b: #291638; --bg-c: #644142; }
+    body[data-theme="free"] { --glow-a: rgba(70,210,255,.34); --glow-b: rgba(102,118,255,.32); --glow-c: rgba(69,222,190,.27); --bg-a: #142d48; --bg-b: #101b35; --bg-c: #173f4c; }
+    body[data-theme="uneasy"] { --glow-a: rgba(89,109,165,.20); --glow-b: rgba(83,91,140,.20); --glow-c: rgba(77,57,117,.22); --bg-a: #222940; --bg-b: #141827; --bg-c: #29263d; }
+    body[data-theme="dread"] { --glow-a: rgba(54,73,112,.18); --glow-b: rgba(50,66,100,.15); --glow-c: rgba(67,50,89,.18); --bg-a: #202636; --bg-b: #111520; --bg-c: #272331; }
 
     body::before {
       content: "";
@@ -328,6 +352,12 @@
         document.getElementById("moodNote").textContent = note;
       }
 
+      function setTheme(theme) {
+        if (document.body.getAttribute("data-theme") !== theme) {
+          document.body.setAttribute("data-theme", theme);
+        }
+      }
+
       function update() {
         var now = new Date();
         var start = atTime(now, 8, 30);
@@ -367,11 +397,11 @@
           document.getElementById("targetText").textContent = "今日 18:00 准时下班";
           document.getElementById("progressLabel").textContent = "今日工作进度";
           document.getElementById("miniIcon").textContent = "☕";
-          if (progress < 20) setMood("😩", "怎么才刚上班", "距离快乐还有一段距离");
-          else if (progress < 45) setMood("😐", "保持冷静", "今日进度正在缓慢加载");
-          else if (progress < 70) setMood("🙂", "看到希望了", "下班正在向你招手");
-          else if (progress < 90) setMood("😄", "快乐逐渐放大", "马上就能冲出办公室");
-          else setMood("🤩", "下班近在眼前！", "请提前收好快乐的心情");
+          if (progress < 20) { setMood("😩", "怎么才刚上班", "距离快乐还有一段距离"); setTheme("tired"); }
+          else if (progress < 45) { setMood("😐", "保持冷静", "今日进度正在缓慢加载"); setTheme("steady"); }
+          else if (progress < 70) { setMood("🙂", "看到希望了", "下班正在向你招手"); setTheme("hopeful"); }
+          else if (progress < 90) { setMood("😄", "快乐逐渐放大", "马上就能冲出办公室"); setTheme("excited"); }
+          else { setMood("🤩", "下班近在眼前！", "请提前收好快乐的心情"); setTheme("party"); }
         } else {
           document.getElementById("status").textContent = mode === "after" ? "下班快乐 · 自由时间" : "早安 · 还没到点";
           document.getElementById("headline").innerHTML = "距离上班<br><span>还能快乐很久</span>";
@@ -382,11 +412,11 @@
           var restTotal = target - restStart;
           var restLeft = Math.max(0, target - now);
           var restRatio = Math.min(1, restLeft / restTotal);
-          if (restRatio > .75) setMood("🥳", "下班就是快乐", "此刻离上班还非常遥远");
-          else if (restRatio > .45) setMood("😎", "自由时间进行中", "先别想工作的事情");
-          else if (restRatio > .2) setMood("🙂", "假装没有明天", "快乐余额正在减少");
-          else if (restRatio > .06) setMood("😟", "上班开始靠近了", "被窝正在努力挽留你");
-          else setMood("😭", "不想上班！", "距离打工时间越来越近");
+          if (restRatio > .75) { setMood("🥳", "下班就是快乐", "此刻离上班还非常遥远"); setTheme("party"); }
+          else if (restRatio > .45) { setMood("😎", "自由时间进行中", "先别想工作的事情"); setTheme("free"); }
+          else if (restRatio > .2) { setMood("🙂", "假装没有明天", "快乐余额正在减少"); setTheme("steady"); }
+          else if (restRatio > .06) { setMood("😟", "上班开始靠近了", "被窝正在努力挽留你"); setTheme("uneasy"); }
+          else { setMood("😭", "不想上班！", "距离打工时间越来越近"); setTheme("dread"); }
         }
 
         var nextQuote = Math.floor(now.getMinutes() / 5) % quotes.length;
