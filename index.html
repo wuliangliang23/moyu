@@ -155,7 +155,13 @@
     .settings-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 17px; }
     .settings-head h2 { margin: 0; font-size: 19px; }
     .close-button { border: 0; color: var(--muted); background: transparent; font-size: 24px; cursor: pointer; }
-    .time-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+    .time-fields {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(120px, 100%), 1fr));
+      width: min(100%, 290px);
+      margin-inline: auto;
+      gap: clamp(8px, 3vw, 14px);
+    }
     .time-field { min-width: 0; color: var(--muted); font-size: 12px; }
     .time-field input {
       display: block;
@@ -192,7 +198,6 @@
     @media (max-width: 350px) {
       .settings-overlay { padding: 10px; }
       .settings-panel { padding: 17px; border-radius: 22px; }
-      .time-fields { grid-template-columns: 1fr; gap: 9px; }
       .time-field input { height: 42px; }
     }
 
