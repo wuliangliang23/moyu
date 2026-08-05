@@ -110,7 +110,79 @@
       box-shadow: 0 8px 28px rgba(255, 111, 174, .3);
     }
 
+    .header-right { display: flex; align-items: center; gap: 10px; }
     .now { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+    button, input { font: inherit; }
+    .settings-button {
+      width: 34px;
+      height: 34px;
+      padding: 0;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: var(--ink);
+      background: rgba(255,255,255,.08);
+      font-size: 17px;
+      cursor: pointer;
+    }
+
+    .settings-overlay {
+      position: fixed;
+      z-index: 10;
+      inset: 0;
+      display: grid;
+      align-items: end;
+      padding: 18px;
+      background: rgba(4,5,17,.58);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity .25s ease, visibility .25s ease;
+      backdrop-filter: blur(9px);
+      -webkit-backdrop-filter: blur(9px);
+    }
+    .settings-overlay.open { opacity: 1; visibility: visible; }
+    .settings-panel {
+      width: min(100%, 480px);
+      margin: 0 auto max(0px, env(safe-area-inset-bottom));
+      padding: 24px;
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 28px;
+      background: linear-gradient(145deg, rgba(37,39,75,.98), rgba(18,20,43,.98));
+      box-shadow: 0 28px 80px rgba(0,0,0,.42);
+      transform: translateY(24px);
+      transition: transform .3s ease;
+    }
+    .settings-overlay.open .settings-panel { transform: translateY(0); }
+    .settings-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; }
+    .settings-head h2 { margin: 0; font-size: 21px; }
+    .close-button { border: 0; color: var(--muted); background: transparent; font-size: 24px; cursor: pointer; }
+    .time-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .time-field { color: var(--muted); font-size: 12px; }
+    .time-field input {
+      width: 100%;
+      margin-top: 8px;
+      padding: 14px 12px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      outline: none;
+      color: var(--ink);
+      color-scheme: dark;
+      background: rgba(255,255,255,.08);
+      font-size: 18px;
+    }
+    .time-field input:focus { border-color: var(--purple); box-shadow: 0 0 0 3px rgba(143,124,255,.18); }
+    .settings-tip { min-height: 20px; margin: 12px 0; color: var(--muted); font-size: 12px; }
+    .settings-tip.error { color: #ff9db1; }
+    .save-button {
+      width: 100%;
+      padding: 14px;
+      border: 0;
+      border-radius: 15px;
+      color: white;
+      background: linear-gradient(90deg, var(--pink), var(--purple));
+      box-shadow: 0 12px 28px rgba(143,124,255,.28);
+      font-weight: 700;
+      cursor: pointer;
+    }
 
     .hero { margin: auto 0; padding: 36px 0 28px; }
 
@@ -291,7 +363,10 @@
   <main>
     <header>
       <div class="brand"><span class="brand-mark">✦</span><span>摸鱼计时器</span></div>
-      <div class="now" id="now">--:--:--</div>
+      <div class="header-right">
+        <div class="now" id="now">--:--:--</div>
+        <button class="settings-button" id="openSettings" type="button" aria-label="设置上下班时间">⚙</button>
+      </div>
     </header>
 
     <section class="hero">
@@ -321,10 +396,27 @@
     </section>
 
     <footer>
-      <div class="schedule">上班 08:30<br>下班 18:00</div>
+      <div class="schedule" id="schedule">上班 08:30<br>下班 18:00</div>
       <div class="mini-icon" id="miniIcon">☕</div>
     </footer>
   </main>
+
+  <div class="settings-overlay" id="settingsOverlay" aria-hidden="true">
+    <section class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+      <div class="settings-head">
+        <h2 id="settingsTitle">设置工作时间</h2>
+        <button class="close-button" id="closeSettings" type="button" aria-label="关闭">×</button>
+      </div>
+      <form id="settingsForm">
+        <div class="time-fields">
+          <label class="time-field">上班时间<input id="startInput" type="time" required></label>
+          <label class="time-field">下班时间<input id="endInput" type="time" required></label>
+        </div>
+        <div class="settings-tip" id="settingsTip">设置会自动保存在这台设备上</div>
+        <button class="save-button" type="submit">保存时间</button>
+      </form>
+    </section>
+  </div>
 
   <script>
     (function () {
@@ -336,6 +428,20 @@
         "距离自由越来越近啦。"
       ];
       var quoteIndex = -1;
+      var workTimes = loadTimes();
+
+      function loadTimes() {
+        try {
+          var saved = JSON.parse(localStorage.getItem("moyu-work-times"));
+          if (saved && /^\d{2}:\d{2}$/.test(saved.start) && /^\d{2}:\d{2}$/.test(saved.end)) return saved;
+        } catch (error) {}
+        return { start: "08:30", end: "18:00" };
+      }
+
+      function splitTime(value) {
+        var parts = value.split(":");
+        return { hour: Number(parts[0]), minute: Number(parts[1]) };
+      }
 
       function pad(value) { return String(value).padStart(2, "0"); }
       function atTime(date, hour, minute) {
@@ -360,8 +466,10 @@
 
       function update() {
         var now = new Date();
-        var start = atTime(now, 8, 30);
-        var end = atTime(now, 18, 0);
+        var startParts = splitTime(workTimes.start);
+        var endParts = splitTime(workTimes.end);
+        var start = atTime(now, startParts.hour, startParts.minute);
+        var end = atTime(now, endParts.hour, endParts.minute);
         var target, mode, progress;
 
         if (now < start) {
@@ -373,7 +481,7 @@
           mode = "work";
           progress = (now - start) / (end - start) * 100;
         } else {
-          target = atTime(new Date(now.getTime() + 86400000), 8, 30);
+          target = atTime(new Date(now.getTime() + 86400000), startParts.hour, startParts.minute);
           mode = "after";
           progress = 100;
         }
@@ -394,7 +502,7 @@
         if (mode === "work") {
           document.getElementById("status").textContent = "今日营业中";
           document.getElementById("headline").innerHTML = "距离下班<br><span>还有一点点</span>";
-          document.getElementById("targetText").textContent = "今日 18:00 准时下班";
+          document.getElementById("targetText").textContent = "今日 " + workTimes.end + " 准时下班";
           document.getElementById("progressLabel").textContent = "今日工作进度";
           document.getElementById("miniIcon").textContent = "☕";
           if (progress < 20) { setMood("😩", "怎么才刚上班", "距离快乐还有一段距离"); setTheme("tired"); }
@@ -405,10 +513,10 @@
         } else {
           document.getElementById("status").textContent = mode === "after" ? "下班快乐 · 自由时间" : "早安 · 还没到点";
           document.getElementById("headline").innerHTML = "距离上班<br><span>还能快乐很久</span>";
-          document.getElementById("targetText").textContent = mode === "after" ? "明日 08:30 开始营业" : "今日 08:30 开始营业";
+          document.getElementById("targetText").textContent = (mode === "after" ? "明日 " : "今日 ") + workTimes.start + " 开始营业";
           document.getElementById("progressLabel").textContent = mode === "after" ? "今日工作已完成" : "今日工作尚未开始";
           document.getElementById("miniIcon").textContent = mode === "after" ? "🌙" : "🌤️";
-          var restStart = mode === "after" ? end : atTime(new Date(now.getTime() - 86400000), 18, 0);
+          var restStart = mode === "after" ? end : atTime(new Date(now.getTime() - 86400000), endParts.hour, endParts.minute);
           var restTotal = target - restStart;
           var restLeft = Math.max(0, target - now);
           var restRatio = Math.min(1, restLeft / restTotal);
@@ -426,6 +534,47 @@
         }
       }
 
+      var overlay = document.getElementById("settingsOverlay");
+      var startInput = document.getElementById("startInput");
+      var endInput = document.getElementById("endInput");
+      var settingsTip = document.getElementById("settingsTip");
+
+      function renderSchedule() {
+        document.getElementById("schedule").innerHTML = "上班 " + workTimes.start + "<br>下班 " + workTimes.end;
+      }
+
+      function openSettings() {
+        startInput.value = workTimes.start;
+        endInput.value = workTimes.end;
+        settingsTip.textContent = "设置会自动保存在这台设备上";
+        settingsTip.className = "settings-tip";
+        overlay.classList.add("open");
+        overlay.setAttribute("aria-hidden", "false");
+      }
+
+      function closeSettings() {
+        overlay.classList.remove("open");
+        overlay.setAttribute("aria-hidden", "true");
+      }
+
+      document.getElementById("openSettings").addEventListener("click", openSettings);
+      document.getElementById("closeSettings").addEventListener("click", closeSettings);
+      overlay.addEventListener("click", function (event) { if (event.target === overlay) closeSettings(); });
+      document.getElementById("settingsForm").addEventListener("submit", function (event) {
+        event.preventDefault();
+        if (!startInput.value || !endInput.value || startInput.value >= endInput.value) {
+          settingsTip.textContent = "下班时间需要晚于上班时间哦";
+          settingsTip.className = "settings-tip error";
+          return;
+        }
+        workTimes = { start: startInput.value, end: endInput.value };
+        try { localStorage.setItem("moyu-work-times", JSON.stringify(workTimes)); } catch (error) {}
+        renderSchedule();
+        update();
+        closeSettings();
+      });
+
+      renderSchedule();
       update();
       setInterval(update, 1000);
     })();
